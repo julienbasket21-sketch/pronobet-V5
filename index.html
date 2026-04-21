@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BetMind AI — Agent Pronostics Expert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0c10; --bg2:#0f1218; --bg3:#151a22;
+    --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+    --accent:#00e5a0; --accent2:#0099ff;
+    --text:#e8edf5; --muted:#6b7591;
+    --danger:#ff4757; --warning:#ffa502; --success:#2ed573;
+    --card:#111520;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;overflow:hidden;}
+  .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .scanline{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:1;}
+  .app{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;max-width:1600px;margin:0 auto;}
+
+  /* HEADER */
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(10,12,16,0.95);}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#000;letter-spacing:-1px;}
+  .logo-text{font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+  .logo-text span{color:var(--accent);}
+  .logo-sub{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-top:1px;}
+  .header-right{display:flex;align-items:center;gap:16px;}
+  .status-pill{display:flex;align-items:center;gap:7px;background:rgba(46,213,115,0.08);border:1px solid rgba(46,213,115,0.2);border-radius:20px;padding:5px 12px;font-family:'Space Mono',monospace;font-size:10px;color:var(--success);letter-spacing:1px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+  .clock{font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);}
+
+  /* LAYOUT */
+  .main{display:grid;grid-template-columns:270px 1fr 310px;flex:1;overflow:hidden;min-height:0;}
+
+  /* SIDEBAR LEFT */
+  .sidebar-left{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .sidebar-left::-webkit-scrollbar{width:3px;}
+  .sidebar-left::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+  .sidebar-section{padding:16px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+  .sport-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .sport-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 6px;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Syne',sans-serif;font-size:11px;font-weight:600;color:var(--muted);line-height:1.3;}
+  .sport-btn:hover{border-color:rgba(0,229,160,0.4);color:var(--accent);background:rgba(0,229,160,0.06);}
+  .sport-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,0.1);}
+  .sport-icon{font-size:20px;display:block;margin-bottom:3px;}
+  .preset-list{display:flex;flex-direction:column;gap:5px;}
+  .preset-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;transition:all 0.2s;width:100%;font-family:'Syne',sans-serif;}
+  .preset-btn:hover{border-color:rgba(0,153,255,0.4);background:rgba(0,153,255,0.06);}
+  .preset-name{font-size:12px;font-weight:700;color:var(--text);display:block;}
+  .preset-desc{font-size:10px;color:var(--muted);margin-top:2px;display:block;line-height:1.4;}
+  .check-list{display:flex;flex-direction:column;gap:8px;}
+  .check-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--muted);}
+  .check-item input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+
+  /* CHAT */
+  .chat-area{display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+  .chat-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(10,12,16,0.8);}
+  .agent-info{display:flex;align-items:center;gap:10px;}
+  .agent-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#000;flex-shrink:0;}
+  .agent-name{font-size:14px;font-weight:700;}
+  .agent-status{font-size:10px;color:var(--accent);font-family:'Space Mono',monospace;margin-top:1px;}
+  .action-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'Space Mono',monospace;}
+  .action-btn:hover{color:var(--text);border-color:var(--border2);}
+
+  .messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth;min-height:0;}
+  .messages::-webkit-scrollbar{width:4px;}
+  .messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+  .msg{display:flex;gap:12px;animation:fadeIn 0.3s ease;}
+  .msg.user{flex-direction:row-reverse;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .msg-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+  .msg.ai .msg-avatar{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;}
+  .msg.user .msg-avatar{background:var(--bg3);border:1px solid var(--border2);color:var(--muted);}
+
+  .msg-bubble{max-width:78%;padding:14px 16px;border-radius:14px;font-size:14px;line-height:1.65;}
+  .msg.ai .msg-bubble{background:var(--card);border:1px solid var(--border);border-top-left-radius:4px;}
+  .msg.user .msg-bubble{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.18);border-top-right-radius:4px;}
+
+  .msg-bubble h4{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-family:'Space Mono',monospace;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .msg-bubble strong{color:var(--accent2);font-weight:700;}
+  .msg-bubble p{margin-bottom:8px;}
+  .msg-bubble p:last-child{margin-bottom:0;}
+  .msg-bubble hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+
+  .risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Space Mono',monospace;margin:3px 3px 3px 0;}
+  .risk-low{background:rgba(46,213,115,0.12);border:1px solid rgba(46,213,115,0.25);color:var(--success);}
+  .risk-med{background:rgba(255,165,2,0.12);border:1px solid rgba(255,165,2,0.25);color:var(--warning);}
+  .risk-high{background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.25);color:var(--danger);}
+
+  .search-step{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,153,255,0.06);border:1px solid rgba(0,153,255,0.15);border-radius:8px;margin-bottom:6px;font-size:11px;color:var(--accent2);font-family:'Space Mono',monospace;animation:fadeIn 0.3s ease;}
+  .spin{animation:spin 1s linear infinite;display:inline-block;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .typing{display:flex;gap:5px;align-items:center;padding:4px 0;}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:0.2s;}
+  .typing span:nth-child(3){animation-delay:0.4s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-7px);}}
+  .typing-label{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-left:6px;animation:blink 1.5s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+  /* INPUT */
+  .input-area{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;background:rgba(10,12,16,0.9);}
+  .input-row{display:flex;gap:10px;align-items:flex-end;}
+  .input-wrap{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:flex-end;transition:border-color 0.2s;}
+  .input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,0.06);}
+  textarea{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;padding:12px 16px;resize:none;min-height:46px;max-height:140px;line-height:1.5;}
+  textarea::placeholder{color:var(--muted);}
+  .send-btn{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-size:16px;color:#000;font-weight:700;}
+  .send-btn:hover{transform:scale(1.06);}
+  .send-btn:active{transform:scale(0.95);}
+  .send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .error-msg{color:var(--danger);font-size:11px;margin-top:6px;font-family:'Space Mono',monospace;padding:6px 10px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:6px;}
+
+  /* SIDEBAR RIGHT */
+  .sidebar-right{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .tracker-header{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .tracker-title{font-size:13px;font-weight:700;color:var(--text);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .clear-btn{font-size:10px;color:var(--muted);cursor:pointer;font-family:'Space Mono',monospace;background:none;border:none;transition:color 0.2s;}
+  .clear-btn:hover{color:var(--danger);}
+  .tracker-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .t-stat{background:var(--bg3);border-radius:6px;padding:6px 8px;text-align:center;border:1px solid var(--border);}
+  .t-stat-val{font-size:14px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent);}
+  .t-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:1px;}
+  .tracker-body{flex:1;overflow-y:auto;padding:10px;min-height:0;}
+  .tracker-body::-webkit-scrollbar{width:3px;}
+  .tracker-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  .bet-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative;}
+  .bet-card.hot{border-color:rgba(0,229,160,0.25);}
+  .bet-card.hot::before{content:'HOT';position:absolute;top:-1px;right:30px;background:var(--accent);color:#000;font-size:8px;font-weight:800;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:0 0 4px 4px;letter-spacing:1px;}
+  .bet-sport{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px;}
+  .bet-match{font-size:12px;font-weight:700;margin:4px 0;line-height:1.3;}
+  .bet-pick{font-size:11px;color:var(--accent2);}
+  .bet-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+  .bet-cote{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);}
+  .bet-prob{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;text-align:right;}
+  .remove-bet{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;transition:color 0.2s;line-height:1;}
+  .remove-bet:hover{color:var(--danger);}
+
+  .combi-section{padding:14px;border-top:1px solid var(--border);flex-shrink:0;}
+  .combi-main{background:linear-gradient(135deg,rgba(0,229,160,0.06),rgba(0,153,255,0.06));border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:12px;margin-bottom:10px;}
+  .combi-row{display:flex;justify-content:space-between;align-items:center;}
+  .combi-label{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px;}
+  .combi-val{font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace;}
+  .combi-prob-val{font-size:16px;font-weight:700;color:var(--warning);font-family:'Space Mono',monospace;}
+  .gauge-bar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:5px 0 3px;}
+  .gauge-fill{height:100%;border-radius:3px;transition:width 0.8s ease;}
+  .analyze-combi-btn{width:100%;padding:11px;background:linear-gradient(135deg,rgba(0,229,160,0.12),rgba(0,153,255,0.12));border:1px solid rgba(0,229,160,0.25);border-radius:8px;color:var(--accent);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1.5px;}
+  .analyze-combi-btn:hover{background:linear-gradient(135deg,rgba(0,229,160,0.2),rgba(0,153,255,0.2));}
+
+  .empty-tracker{text-align:center;padding:40px 16px;color:var(--muted);line-height:1.8;}
+  .empty-icon{font-size:36px;margin-bottom:12px;opacity:0.5;}
+  .empty-text{font-size:11px;font-family:'Space Mono',monospace;}
+
+  .welcome-card{background:linear-gradient(135deg,rgba(0,229,160,0.04),rgba(0,153,255,0.04));border:1px solid rgba(0,229,160,0.12);border-radius:12px;padding:16px;margin-bottom:12px;}
+  .welcome-card h3{color:var(--accent);font-size:14px;font-weight:700;margin-bottom:6px;}
+  .welcome-card p{font-size:12px;color:var(--muted);line-height:1.7;}
+  .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
+  .feature-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--muted);line-height:1.4;}
+  .feature-item strong{color:var(--text);display:block;margin-bottom:2px;}
+
+  @media(max-width:860px){.main{grid-template-columns:1fr;}.sidebar-left,.sidebar-right{display:none;}}
+  ::selection{background:rgba(0,229,160,0.25);color:var(--text);}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">BM</div>
+      <div>
+        <div class="logo-text">Bet<span>Mind</span> AI</div>
+        <div class="logo-sub">AGENT PRONOSTICS EXPERT — GRATUIT & ILLIMITÉ</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill"><div class="dot"></div>GROQ + SERPER · GRATUIT</div>
+      <div class="clock" id="clock">00:00:00</div>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- SIDEBAR GAUCHE -->
+    <div class="sidebar-left">
+      <div class="sidebar-section">
+        <div class="section-label">Sport analysé</div>
+        <div class="sport-grid">
+          <button class="sport-btn active" onclick="selectSport(this,'Football')"><span class="sport-icon">⚽</span>Football</button>
+          <button class="sport-btn" onclick="selectSport(this,'Basketball')"><span class="sport-icon">🏀</span>Basketball</button>
+          <button class="sport-btn" onclick="selectSport(this,'Tennis')"><span class="sport-icon">🎾</span>Tennis</button>
+          <button class="sport-btn" onclick="selectSport(this,'Rugby')"><span class="sport-icon">🏉</span>Rugby</button>
+          <button class="sport-btn" onclick="selectSport(this,'Hockey sur glace')"><span class="sport-icon">🏒</span>Hockey</button>
+          <button class="sport-btn" onclick="selectSport(this,'MMA et Boxe')"><span class="sport-icon">🥊</span>MMA/Boxe</button>
+          <button class="sport-btn" onclick="selectSport(this,'Baseball')"><span class="sport-icon">⚾</span>Baseball</button>
+          <button class="sport-btn" onclick="selectSport(this,'Formule 1')"><span class="sport-icon">🏎️</span>F1/Moto</button>
+          <button class="sport-btn" onclick="selectSport(this,'Volleyball')"><span class="sport-icon">🏐</span>Volley</button>
+          <button class="sport-btn" onclick="selectSport(this,'Handball')"><span class="sport-icon">🤾</span>Handball</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Analyses rapides</div>
+        <div class="preset-list">
+          <button class="preset-btn" onclick="usePreset('Quels sont les meilleurs paris du jour ? Analyse les matchs en cours et à venir, compare les cotes et identifie les meilleures opportunités.')">
+            <span class="preset-name">🔥 Tops paris du jour</span>
+            <span class="preset-desc">Meilleures opportunités toutes ligues</span>
+          </button>
+          <button class="preset-btn" onclick="usePreset('Identifie les 3 paris les plus sûrs de ce week-end avec le meilleur ratio risque/cote. Faible risque prioritaire.')">
+            <span class="preset-name">🛡️ Paris sûrs week-end</span>
+            <span class="preset-desc">Faible risque, bon rapport cote</span>
+          </button>
+          <button class="preset-btn" onclick="usePreset('Détecte les meilleurs value bets du moment : cotes proposées par les bookmakers supérieures à la probabilité réelle. Explique pourquoi chaque cote est sous-estimée.')">
+            <span class="preset-name">💎 Value Bets détectés</span>
+            <span class="preset-desc">Cotes sous-estimées par les bookies</span>
+          </button>
+          <button class="preset-btn" onclick="usePreset('Propose un combiné optimisé de 3 sélections pour ce week-end avec un bon équilibre risque/gain. Analyse chaque sélection en détail.')">
+            <span class="preset-name">🎯 Combiné optimisé</span>
+            <span class="preset-desc">3 sélections équilibrées</span>
+          </button>
+          <button class="preset-btn" onclick="usePreset('Analyse les statistiques de buts des 5 grandes ligues de football (Ligue 1, Premier League, Liga, Serie A, Bundesliga). Identifie les meilleures opportunités paris buts.')">
+            <span class="preset-name">⚽ Stats buts grandes ligues</span>
+            <span class="preset-desc">Patterns scores et buts</span>
+          </button>
+          <button class="preset-btn" onclick="usePreset('Compare les cotes des matchs majeurs de la semaine sur Winamax, Betclic, Unibet et Bet365. Où trouver la meilleure valeur ?')">
+            <span class="preset-name">📊 Comparateur de cotes</span>
+            <span class="preset-desc">Meilleure cote par bookmaker</span>
+          </button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">Critères d'analyse</div>
+        <div class="check-list">
+          <label class="check-item"><input type="checkbox" id="chk-form" checked> Forme récente (5-10 matchs)</label>
+          <label class="check-item"><input type="checkbox" id="chk-domicile" checked> Avantage domicile/extérieur</label>
+          <label class="check-item"><input type="checkbox" id="chk-blessures" checked> Blessures et absences</label>
+          <label class="check-item"><input type="checkbox" id="chk-h2h" checked> Historique H2H</label>
+          <label class="check-item"><input type="checkbox" id="chk-cotes" checked> Comparaison multi-bookmakers</label>
+          <label class="check-item"><input type="checkbox" id="chk-motivation" checked> Motivation / enjeux</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <div class="agent-info">
+          <div class="agent-avatar">AI</div>
+          <div>
+            <div class="agent-name">BetMind Expert — Llama 3.3 70B · Recherche Web Active</div>
+            <div class="agent-status">● GRATUIT · ILLIMITÉ · DONNÉES EN TEMPS RÉEL</div>
+          </div>
+        </div>
+        <button class="action-btn" onclick="clearChat()">↺ Reset</button>
+      </div>
+
+      <div class="messages" id="messages">
+        <div class="msg ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-bubble">
+            <h4>🎯 BetMind AI — 100% Gratuit & Illimité</h4>
+            <div class="welcome-card">
+              <h3>Bienvenue, Analyste !</h3>
+              <p>Propulsé par <strong>Llama 3.3 70B</strong> via Groq et la recherche web en temps réel via Serper. Totalement gratuit, sans limite d'utilisation.</p>
+            </div>
+            <div class="feature-grid">
+              <div class="feature-item"><strong>📊 Cotes multi-bookmakers</strong>Winamax, Betclic, Unibet, Bet365</div>
+              <div class="feature-item"><strong>🏃 Forme & statistiques</strong>Données actualisées en temps réel</div>
+              <div class="feature-item"><strong>🏠 Domicile / Extérieur</strong>Stats par terrain et contexte</div>
+              <div class="feature-item"><strong>🤕 Blessures & absences</strong>Joueurs clés manquants</div>
+              <div class="feature-item"><strong>💎 Value Bets</strong>Cotes sous-estimées détectées</div>
+              <div class="feature-item"><strong>🎰 Paris combinés</strong>Analyse risque global</div>
+            </div>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);">Utilisez les raccourcis à gauche ou posez directement vos questions.</p>
+            <p style="margin-top:8px;font-size:11px;color:var(--danger);font-family:'Space Mono',monospace;">⚠ Les paris sportifs comportent des risques. Jouez de façon responsable.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-row">
+          <div class="input-wrap">
+            <textarea id="userInput" placeholder="Ex: Analyse PSG vs Real Madrid... Quels sont les meilleurs paris ce soir ?..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          </div>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+        <div id="errorMsg" class="error-msg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR DROITE -->
+    <div class="sidebar-right">
+      <div class="tracker-header">
+        <div class="tracker-title">🎯 Mes Sélections<button class="clear-btn" onclick="clearBets()">✕ Effacer</button></div>
+        <div class="tracker-stats">
+          <div class="t-stat"><div class="t-stat-val" id="betCount">0</div><div class="t-stat-label">Sélections</div></div>
+          <div class="t-stat"><div class="t-stat-val" id="avgProb">—</div><div class="t-stat-label">Prob. moy.</div></div>
+        </div>
+      </div>
+      <div class="tracker-body" id="betTracker">
+        <div class="empty-tracker"><div class="empty-icon">📋</div><div class="empty-text">Vos sélections<br>apparaîtront ici</div></div>
+      </div>
+      <div class="combi-section" id="combiSection" style="display:none;">
+        <div class="section-label" style="margin-bottom:10px;">Récapitulatif combiné</div>
+        <div class="combi-main">
+          <div class="combi-row">
+            <div><div class="combi-label">COTE TOTALE</div><div class="combi-val" id="combiCote">—</div></div>
+            <div style="text-align:right;"><div class="combi-label">PROB. GLOBALE</div><div class="combi-prob-val" id="combiProb">—</div></div>
+          </div>
+          <div style="margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;">RISQUE</span>
+              <span id="combiRiskLabel" style="font-size:10px;font-family:'Space Mono',monospace;"></span>
+            </div>
+            <div class="gauge-bar"><div class="gauge-fill" id="combiGaugeFill"></div></div>
+          </div>
+        </div>
+        <button class="analyze-combi-btn" onclick="analyzeCombo()">⚡ Analyser le combiné</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIGUREZ VOTRE URL WORKER CLOUDFLARE ICI
+// ═══════════════════════════════════════════════════════
+const WORKER_URL = 'https://promobet.julien-basket21.workers.dev/';
+// Exemple : const WORKER_URL = 'https://betmind-proxy.julien.workers.dev';
+
+// ═══════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════
+const SYSTEM_PROMPT = `Tu es BetMind AI, un agent expert en pronostics de paris sportifs.
+
+REGLES ABSOLUES - RESPECTER IMPERATIVEMENT :
+1. Tu ne proposes QUE des matchs et evenements confirmes dans les donnees de recherche web fournies.
+2. Tu n'utilises JAMAIS tes connaissances internes pour inventer ou suggerer des matchs, joueurs ou cotes.
+3. Si un match ou joueur n'apparait PAS dans les resultats de recherche fournis, tu ne le mentionnes PAS.
+4. Si les donnees sont insuffisantes, tu le dis clairement et tu demandes a l'utilisateur de preciser.
+5. Les cotes que tu indiques doivent venir des resultats web. Si tu n'as pas de cote precise, tu indiques "cote a verifier sur le site du bookmaker".
+6. Tu ignores completement tes connaissances sur les evenements passes. SEULES les donnees des recherches web font foi.
+7. Si un joueur est a la retraite ou indisponible selon les donnees recentes, tu le signales immediatement.
+
+IMPORTANT SUR LA DATE : La date et heure exactes te seront communiquees dans chaque message utilisateur via RAPPEL CRITIQUE. Fie-toi a cette date, pas a tes connaissances internes. Les donnees web que tu recois sont en temps reel. Fie-toi UNIQUEMENT a elles.
+
+FORMAT DE REPONSE :
+
+[SOURCE DES DONNEES] : Indique d'abord les sources trouvees dans les recherches.
+
+MATCHS CONFIRMES TROUVES :
+Liste uniquement les matchs presents dans les resultats de recherche.
+
+Pour chaque match analyse :
+ANALYSE : [Match exact trouve dans les recherches]
+Competition : [source]
+Date et heure : [date exacte des resultats]
+
+FORME RECENTE (selon les resultats web) :
+- Equipe A : [resultats des recherches uniquement]
+- Equipe B : [resultats des recherches uniquement]
+
+FACTEURS CLES :
+- Absences : [selon les recherches]
+- Contexte : [selon les recherches]
+
+COTES (selon les recherches) :
+- Fourchette : [si trouvees dans les resultats, sinon "a verifier"]
+- Probabilite implicite : [calcul si cotes disponibles]
+- Value bet : [OUI/NON avec justification basee sur les donnees]
+
+PRONOSTIC :
+- Selection : [Paris recommande]
+- Cote cible : [si disponible dans les donnees]
+- Confiance : [% base sur la qualite des donnees trouvees]
+
+JAUGE DE RISQUE :
+[FAIBLE 🟢 / MOYEN 🟡 / ELEVE 🔴] - [explication]
+
+AJOUT TRACKER (pour chaque pari recommande) :
+%%BET%%{"sport":"Football","match":"Equipe A vs Equipe B","pick":"Description du pari","cote":1.85,"prob":65}%%END%%
+
+Si les donnees sont insuffisantes ou contradictoires, dis-le clairement plutot que d'inventer.`;
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let bets = [];
+let conversationHistory = [];
+let isLoading = false;
+let selectedSport = 'Football';
+
+// Clock
+setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 1000);
+document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR');
+
+function selectSport(btn, sport) {
+  document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedSport = sport;
+}
+
+function usePreset(text) {
+  const inp = document.getElementById('userInput');
+  inp.value = text; autoResize(inp); inp.focus();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function getContext() {
+  const labels = [];
+  if (document.getElementById('chk-form').checked) labels.push('forme récente');
+  if (document.getElementById('chk-domicile').checked) labels.push('domicile/extérieur');
+  if (document.getElementById('chk-blessures').checked) labels.push('blessures/absences');
+  if (document.getElementById('chk-h2h').checked) labels.push('H2H');
+  if (document.getElementById('chk-cotes').checked) labels.push('comparaison cotes');
+  if (document.getElementById('chk-motivation').checked) labels.push('motivation/enjeux');
+  return `Sport: ${selectedSport}. Critères: ${labels.join(', ')}.`;
+}
+
+// ── Recherche web via Worker ──
+async function webSearch(query) {
+  const resp = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'search', query })
+  });
+  const data = await resp.json();
+  return data.results || 'Aucun résultat trouvé.';
+}
+
+// ── Appel LLM via Worker ──
+async function callLLM(messages) {
+  const resp = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'chat', messages })
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  return data.text || '';
+}
+
+// ── Format réponse ──
+function formatResponse(text) {
+  let c = text.replace(/%%BET%%[\s\S]*?%%END%%/g, '').trim();
+  c = c
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^#{1,3} (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/🟢/g, '<span class="risk-badge risk-low">🟢 FAIBLE</span>')
+    .replace(/🟡/g, '<span class="risk-badge risk-med">🟡 MOYEN</span>')
+    .replace(/🔴/g, '<span class="risk-badge risk-high">🔴 ÉLEVÉ</span>');
+  const lines = c.split('\n'), parts = [];
+  let buf = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { if (buf.length) { parts.push('<p>' + buf.join(' ') + '</p>'); buf = []; } }
+    else if (t.startsWith('<h4>') || t.startsWith('<hr>')) { if (buf.length) { parts.push('<p>' + buf.join(' ') + '</p>'); buf = []; } parts.push(t); }
+    else buf.push(t);
+  }
+  if (buf.length) parts.push('<p>' + buf.join(' ') + '</p>');
+  return parts.join('\n');
+}
+
+function extractBets(text) {
+  const rx = /%%BET%%(\{[\s\S]*?\})%%END%%/g;
+  let m;
+  while ((m = rx.exec(text)) !== null) {
+    try {
+      const b = JSON.parse(m[1]);
+      if (b.match && b.pick && b.cote && !bets.some(x => x.match === b.match && x.pick === b.pick)) {
+        bets.push(b); renderBets();
+      }
+    } catch(e) {}
+  }
+}
+
+function addMessage(role, content) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'assistant' ? 'ai' : 'user');
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = role === 'assistant' ? 'AI' : 'U';
+  const bub = document.createElement('div');
+  bub.className = 'msg-bubble';
+  if (role === 'assistant') { bub.innerHTML = formatResponse(content); setTimeout(() => extractBets(content), 300); }
+  else bub.textContent = content;
+  div.appendChild(av); div.appendChild(bub);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addStepMsg(text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble"><div class="search-step"><span class="spin">⟳</span> ${text}</div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+// ── TRACKER ──
+function removeBet(i) { bets.splice(i, 1); renderBets(); }
+function clearBets() { bets = []; renderBets(); }
+
+function renderBets() {
+  const tracker = document.getElementById('betTracker');
+  const combi = document.getElementById('combiSection');
+  document.getElementById('betCount').textContent = bets.length;
+  document.getElementById('avgProb').textContent = bets.length ? Math.round(bets.reduce((a,b)=>a+parseFloat(b.prob||50),0)/bets.length)+'%' : '—';
+
+  if (!bets.length) {
+    tracker.innerHTML = `<div class="empty-tracker"><div class="empty-icon">📋</div><div class="empty-text">Vos sélections<br>apparaîtront ici</div></div>`;
+    combi.style.display = 'none'; return;
+  }
+
+  tracker.innerHTML = bets.map((b,i) => {
+    const p = parseFloat(b.prob||50), hot = p>=65;
+    const rc = p>=65?'risk-low':p>=45?'risk-med':'risk-high', ri = p>=65?'🟢':p>=45?'🟡':'🔴';
+    return `<div class="bet-card${hot?' hot':''}">
+      <button class="remove-bet" onclick="removeBet(${i})">✕</button>
+      <div class="bet-sport">${b.sport||'—'}</div>
+      <div class="bet-match">${b.match}</div>
+      <div class="bet-pick">${b.pick}</div>
+      <div class="bet-footer">
+        <div class="bet-cote">${parseFloat(b.cote).toFixed(2)}</div>
+        <div><div class="bet-prob">${p}% prob.</div><span class="risk-badge ${rc}" style="margin:3px 0 0;padding:2px 7px;font-size:10px;">${ri}</span></div>
+      </div></div>`;
+  }).join('');
+
+  if (bets.length >= 2) {
+    combi.style.display = 'block';
+    const tc = bets.reduce((a,b)=>a*parseFloat(b.cote),1);
+    const tp = bets.reduce((a,b)=>a*(parseFloat(b.prob||50)/100),1)*100;
+    document.getElementById('combiCote').textContent = tc.toFixed(2);
+    document.getElementById('combiProb').textContent = tp.toFixed(1)+'%';
+    const rp = Math.max(0,Math.min(100,100-tp));
+    const fill = document.getElementById('combiGaugeFill'), lbl = document.getElementById('combiRiskLabel');
+    fill.style.width = rp+'%';
+    if (rp<40){fill.style.background='var(--success)';lbl.textContent='FAIBLE';lbl.style.color='var(--success)';}
+    else if(rp<70){fill.style.background='var(--warning)';lbl.textContent='MOYEN';lbl.style.color='var(--warning)';}
+    else{fill.style.background='var(--danger)';lbl.textContent='ÉLEVÉ';lbl.style.color='var(--danger)';}
+  } else combi.style.display='none';
+}
+
+function analyzeCombo() {
+  if (bets.length < 2) return;
+  const list = bets.map(b=>`- ${b.match} | ${b.pick} | Cote: ${parseFloat(b.cote).toFixed(2)} | Prob: ${b.prob}%`).join('\n');
+  const tc = bets.reduce((a,b)=>a*parseFloat(b.cote),1).toFixed(2);
+  const tp = (bets.reduce((a,b)=>a*(parseFloat(b.prob||50)/100),1)*100).toFixed(1);
+  document.getElementById('userInput').value = `Analyse mon combiné de ${bets.length} sélections :\n${list}\n\nCote totale: ${tc} | Prob. combinée: ${tp}%\n\nVérifie chaque sélection, évalue la cohérence, identifie les risques. Verdict final : JOUER / JOUER PRUDEMMENT / NE PAS JOUER.`;
+  autoResize(document.getElementById('userInput'));
+  sendMessage();
+}
+
+function clearChat() {
+  if (!confirm('Réinitialiser ?')) return;
+  conversationHistory = [];
+  document.getElementById('messages').innerHTML = `<div class="msg ai"><div class="msg-avatar">AI</div><div class="msg-bubble"><h4>↺ Réinitialisé</h4><p>Nouvelle session démarrée !</p></div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SEND MESSAGE — Pipeline : recherche web → LLM
+// ═══════════════════════════════════════════════════════
+// Retourne l'URL Flashscore appropriée selon le sport détecté
+function getFlashscoreUrl(query) {
+  const q = query.toLowerCase();
+  if (q.includes('tennis')) return 'https://www.flashscore.fr/tennis/';
+  if (q.includes('nba') || q.includes('basket')) return 'https://www.flashscore.fr/basketball/etats-unis/nba/';
+  if (q.includes('rugby')) return 'https://www.flashscore.fr/rugby-union/';
+  if (q.includes('ligue 1') || q.includes('ligue1')) return 'https://www.flashscore.fr/football/france/ligue-1/';
+  if (q.includes('premier league') || q.includes('angleterre')) return 'https://www.flashscore.fr/football/angleterre/premier-league/';
+  if (q.includes('liga') || q.includes('espagne')) return 'https://www.flashscore.fr/football/espagne/primera-division/';
+  if (q.includes('serie a') || q.includes('italie')) return 'https://www.flashscore.fr/football/italie/serie-a/';
+  if (q.includes('bundesliga') || q.includes('allemagne')) return 'https://www.flashscore.fr/football/allemagne/bundesliga/';
+  if (q.includes('ligue des champions') || q.includes('champions league') || q.includes('ucl')) return 'https://www.flashscore.fr/football/europe/ligue-des-champions/';
+  if (q.includes('handball')) return 'https://www.flashscore.fr/handball/';
+  if (q.includes('hockey')) return 'https://www.flashscore.fr/hockey-sur-glace/';
+  if (q.includes('volley')) return 'https://www.flashscore.fr/volleyball/';
+  return 'https://www.flashscore.fr/football/';
+}
+
+async function sendMessage() {
+  // Date et heure exactes en temps reel depuis le navigateur
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const timeStr = now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  const fullDateTime = dateStr + ' a ' + timeStr;
+
+  if (WORKER_URL === 'VOTRE_URL_WORKER_ICI') {
+    document.getElementById('errorMsg').textContent = '⚠ Configurez WORKER_URL dans le fichier HTML.';
+    document.getElementById('errorMsg').style.display = 'block';
+    return;
+  }
+
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  document.getElementById('errorMsg').style.display = 'none';
+  addMessage('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  // Indicateur de chargement
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'msg ai';
+  typingDiv.id = 'typingIndicator';
+  typingDiv.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble"><div style="display:flex;align-items:center;gap:10px;"><div class="typing"><span></span><span></span><span></span></div><span class="typing-label" id="typingLabel">Préparation de l'analyse...</span></div></div>`;
+  document.getElementById('messages').appendChild(typingDiv);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+
+  function setLabel(txt) {
+    const lbl = document.getElementById('typingLabel');
+    if (lbl) lbl.textContent = txt;
+  }
+
+  try {
+    // ── ÉTAPE 1 : requêtes de recherche ciblées ──
+    setLabel('Identification des recherches...');
+
+    // Construire des requêtes précises et datées directement
+    const month = now.toLocaleDateString('fr-FR', {month:'long'});
+    const year = now.getFullYear();
+    const dayDate = now.toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+
+    // Requêtes fixes ciblées selon la demande
+    const baseQueries = [
+      text + ' ' + month + ' ' + year,
+      text + ' matchs ' + dayDate,
+      text + ' cotes bookmakers ' + month + ' ' + year,
+      text + ' blessures absences ' + month + ' ' + year,
+      text + ' flashscore ' + month + ' ' + year,
+      text + ' pronostics ' + dayDate,
+    ];
+
+    // ── ÉTAPE 2 : recherches parallèles ──
+    setLabel('Recherche en cours sur Flashscore et autres sources...');
+    let allSearchResults = '';
+
+    const searchPromises = baseQueries.slice(0, 4).map(async (q, i) => {
+      try {
+        const results = await webSearch(q);
+        return `\n=== Recherche ${i+1}: "${q}" ===\n${results}`;
+      } catch(e) {
+        return `\n=== Recherche ${i+1} echouee ===`;
+      }
+    });
+
+    const searchResults = await Promise.all(searchPromises);
+    allSearchResults = searchResults.join('\n');
+
+    // ── ÉTAPE 2b : scraping direct Flashscore ──
+    setLabel('Lecture des données Flashscore en direct...');
+    try {
+      const flashResp = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fetch_url', url: getFlashscoreUrl(text) })
+      });
+      const flashData = await flashResp.json();
+      if (flashData.results && flashData.results.length > 100) {
+        allSearchResults += '\n\n=== DONNEES FLASHSCORE DIRECTES ===\n' + flashData.results;
+      }
+    } catch(e) {}
+
+    // ── ÉTAPE 3 : analyse finale ──
+    setLabel('Analyse et rédaction du pronostic...');
+
+    const strictInstruction = 'RAPPEL CRITIQUE: Nous sommes exactement le ' + fullDateTime + '. Cette date et heure sont certaines et proviennent de lhorloge en temps reel du navigateur. Tu dois UNIQUEMENT utiliser les informations contenues dans les DONNEES WEB ci-dessous. NE JAMAIS inventer de matchs, joueurs, cotes ou resultats. Si un match ou joueur nest pas dans les donnees, ne le mentionne pas. Si un joueur est a la retraite, ne propose aucun match avec lui. UTILISE SEULEMENT CE QUI EST DANS LES DONNEES WEB.';
+
+    const messagesForLLM = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...conversationHistory,
+      {
+        role: 'user',
+        content: strictInstruction + '\n\nDEMANDE UTILISATEUR: ' + text + '\n\nCONTEXTE: ' + getContext() + '\n\n=== DONNEES WEB RECENTES (source unique autorisee) ===\n' + allSearchResults + '\n=== FIN DES DONNEES WEB ===\n\nReponds en te basant EXCLUSIVEMENT sur les donnees ci-dessus. Si les donnees ne contiennent pas assez d informations pour un pronostic fiable, dis-le clairement.'
+      }
+    ];
+
+    const finalResponse = await callLLM(messagesForLLM);
+
+    // Supprimer l'indicateur
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) indicator.remove();
+
+    if (finalResponse.trim()) {
+      conversationHistory.push({ role: 'user', content: text });
+      conversationHistory.push({ role: 'assistant', content: finalResponse });
+      // Limiter l'historique à 10 échanges
+      if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
+      addMessage('assistant', finalResponse);
+    } else {
+      throw new Error('Réponse vide reçue du modèle.');
+    }
+
+  } catch(err) {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) indicator.remove();
+    console.error(err);
+    document.getElementById('errorMsg').textContent = '⚠ Erreur : ' + err.message;
+    document.getElementById('errorMsg').style.display = 'block';
+  } finally {
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+}
+</script>
+</body>
+</html>
